@@ -17,11 +17,15 @@
   export let text: string;
   export let timestamp: Date;
   export let color: string | null = null;
+
+  let focused = false;
   // export let followups: NoteInterface[] = [];
 
   let ref: HTMLElement;
 
   function handleNoteClick(event: MouseEvent) {
+    if (focused) return;
+    focused = true;
     const content = ref.querySelector(".note__content") as HTMLInputElement;
     content.focus();
     document.execCommand("selectAll", false, null);
@@ -32,6 +36,7 @@
   }
 
   function handleBlur(event: FocusEvent) {
+    focused = false;
     dispatch("blur", { event, note: { text, timestamp } });
   }
 
@@ -47,19 +52,9 @@
   }
 </script>
 
-<div
-  class="note"
-  bind:this={ref}
-  on:click={handleNoteClick}
-  on:focusout={handleBlur}
->
+<div class="note" bind:this={ref} on:click={handleNoteClick} on:focusout={handleBlur}>
   <div class="content">
-    <input
-      class="note__content"
-      type="text"
-      on:change={handleChange}
-      bind:value={text}
-    />
+    <input class="note__content" type="text" on:change={handleChange} bind:value={text} />
     <div class="note__timestamp">{moment(timestamp).format("HH:mm:ss")}</div>
     <button class="delete" on:click={handleDeleteNote} />
   </div>

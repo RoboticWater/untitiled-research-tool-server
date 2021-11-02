@@ -22,8 +22,12 @@ async def get_note_data(id):
 @router.post("", response_description="Note added into the database")
 @router.post("/", response_description="Note added into the database")
 async def add_note_data(note: NoteModel = Body(...)):
+    print(note)
     note = await db.database.note_collection.insert_one(jsonable_encoder(note))
+    print(note)
     new_note = await db.database.note_collection.find_one({"_id": note.inserted_id})
+    print(new_note)
+    print(make_dict(new_note))
     return ResponseModel(make_dict(new_note), "Note added successfully.")
 
 

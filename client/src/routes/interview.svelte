@@ -55,10 +55,7 @@
           } else {
             function checkState() {
               if (connection.iceGatheringState === "complete") {
-                connection.removeEventListener(
-                  "icegatheringstatechange",
-                  checkState
-                );
+                connection.removeEventListener("icegatheringstatechange", checkState);
                 resolve();
               }
             }
@@ -112,24 +109,18 @@
       if (event.data) {
         const data = JSON.parse(event.data);
         if (data.result) {
-          data.result[0].word =
-            data.result[0].word.charAt(0).toUpperCase() +
-            data.result[0].word.slice(1);
+          data.result[0].word = data.result[0].word.charAt(0).toUpperCase() + data.result[0].word.slice(1);
           transcript = [...transcript, { words: data.result }];
           partial = "";
         } else if (data.partial) {
-          partial =
-            data.partial.charAt(0).toUpperCase() + data.partial.slice(1);
+          partial = data.partial.charAt(0).toUpperCase() + data.partial.slice(1);
         }
       }
     };
     connection.oniceconnectionstatechange = () => {
       if (connection.iceConnectionState == "disconnected") {
         status = ConnectionStatus.IDLE;
-        console.log(
-          "%c === WebRTC Connection Disconnected === ",
-          "color: #d79f20"
-        );
+        console.log("%c === WebRTC Connection Disconnected === ", "color: #d79f20");
       }
     };
 
@@ -182,29 +173,26 @@
     // clearTimeout(saveTimeout);
     // saveTimeout = setTimeout(() => store.set('notes', notes), 500);
     if (noteAdded) {
-      const childNotes: HTMLCollectionOf<Element> =
-        notesRef.getElementsByClassName("note");
-      const lastNote: HTMLElement = childNotes[
-        childNotes.length - 1
-      ] as HTMLElement;
-      (
-        lastNote.getElementsByClassName("note__content")[0] as HTMLElement
-      ).focus();
-      notes[notes.length - 1].text = "";
+      const childNotes: HTMLCollectionOf<Element> = notesRef.getElementsByClassName("note");
+      const lastNote: HTMLElement = childNotes[childNotes.length - 1] as HTMLElement;
+      (lastNote.getElementsByClassName("note__content")[0] as HTMLElement).focus();
+      // notes[notes.length - 1].text = "";
       noteAdded = false;
     }
   });
 
-  async function addNote(runPostUpdate: boolean = true) {
+  async function addNote(text: string = "", runPostUpdate: boolean = true) {
     const res = await fetch("/api/note", {
       method: "POST",
-      body: JSON.stringify({ text: "" }),
+      body: JSON.stringify({ text }),
       headers: {
         "Content-Type": "application/json",
       },
     }).then((res) => {
       return res.json();
     });
+    console.log(res);
+
     const note = res.data;
     notes = [...notes, note];
     noteAdded = runPostUpdate;
@@ -235,8 +223,31 @@
       handleDeleteNote(note, i);
     }
   }
+
+  function getSelectionText() {
+    var text = "";
+    if (window.getSelection) {
+      text = window.getSelection().toString();
+    } else if (document.selection && document.selection.type != "Control") {
+      text = document.selection.createRange().text;
+    }
+    return text;
+  }
+
+  function handleKeydown(event: KeyboardEvent) {
+    if (event.key === " " && event.ctrlKey) {
+      const selection = getSelectionText();
+      if (selection !== "") addNote(selection);
+    }
+  }
+
+  function handleAddNote() {
+    const selection = getSelectionText();
+    addNote(selection || "");
+  }
 </script>
 
+<svelte:window on:keydown={handleKeydown} />
 <section>
   <content>
     <div class="meta">
@@ -250,22 +261,12 @@
           }}
           >{status === ConnectionStatus.CONNECTED ? "Stop" : "Start"}
           <svg width="16px" height="16px">
-            <path
-              xmlns="http://www.w3.org/2000/svg"
-              d="m4,3 l8,5 l-8,5 l0,-10z"
-              stroke="var(--black)"
-              fill="var(--black)"
-            />
+            <path xmlns="http://www.w3.org/2000/svg" d="m4,3 l8,5 l-8,5 l0,-10z" stroke="var(--black)" fill="var(--black)" />
           </svg>
         </button>
         <div class="status">
           {status}
-          <div
-            class="status-icon"
-            class:conencted={status === ConnectionStatus.CONNECTED}
-            class:error={status === ConnectionStatus.ERROR}
-            class:connecting={status === ConnectionStatus.CONNECTING}
-          />
+          <div class="status-icon" class:conencted={status === ConnectionStatus.CONNECTED} class:error={status === ConnectionStatus.ERROR} class:connecting={status === ConnectionStatus.CONNECTING} />
         </div>
       </div>
     </div>
@@ -274,8 +275,7 @@
         {#each transcript as block}
           <div class="transcript__block">
             {#each block.words as wordData, i}
-              <span class="transcript__word">{wordData.word}</span
-              >{#if i < block.words.length - 1}&nbsp;{/if}
+              <span class="transcript__word">{wordData.word}</span>{#if i < block.words.length - 1}&nbsp;{/if}
             {/each}
           </div>
         {/each}
@@ -284,16 +284,9 @@
     </div>
     <div bind:this={notesRef} class="notes">
       {#each notes as note, i}
-        <Note
-          id={note.id}
-          bind:text={note.text}
-          timestamp={note.created}
-          on:delete={() => handleDeleteNote(note, i)}
-          on:change={() => handleChange(note, i)}
-          on:blur={() => handleBlur(note, i)}
-        />
+        <Note id={note.id} bind:text={note.text} timestamp={note.created} on:delete={() => handleDeleteNote(note, i)} on:change={() => handleChange(note, i)} on:blur={() => handleBlur(note, i)} />
       {/each}
-      <button class="add-note" on:click={() => addNote()}> Add note +</button>
+      <button class="add-note" on:click={handleAddNote}> Add note +</button>
     </div>
   </content>
 </section>
@@ -394,8 +387,7 @@
     }
     &.connecting {
       background: #969696;
-      animation: connecting 2s cubic-bezier(0.67, 0.09, 0.2, 0.92) infinite
-        forwards;
+      animation: connecting 2s cubic-bezier(0.67, 0.09, 0.2, 0.92) infinite forwards;
     }
   }
   @keyframes connecting {
