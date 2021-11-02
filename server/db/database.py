@@ -1,43 +1,29 @@
-import os
-import urllib
-import databases
-import sqlalchemy
+from motor.motor_asyncio import AsyncIOMotorClient
+from decouple import config
 
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from datetime import datetime
 
-host_server = os.environ.get('host_server', 'localhost')
-db_server_port = urllib.parse.quote_plus(
-    str(os.environ.get('db_server_port', '5432')))
-database_name = os.environ.get('DATABASE_NAME', 'untitled_research_tool')
-db_username = urllib.parse.quote_plus(
-    str(os.environ.get('DATABASE_USER', 'postgres')))
-db_password = urllib.parse.quote_plus(
-    str(os.environ.get('DATABASE_PASS', 'secret')))
-ssl_mode = urllib.parse.quote_plus(str(os.environ.get('ssl_mode', 'prefer')))
+from .helpers import make_dict
 
-DATABASE_URL = "postgresql://{}:{}@{}:{}/{}?sslmode={}" .format(
-    db_username, db_password, host_server, db_server_port, database_name, ssl_mode)
+db_client: AsyncIOMotorClient = None
+database = None
+note_collection = None
+MONGO_DETAILS = config('MONGO_DETAILS')
 
-database = databases.Database(DATABASE_URL)
-metadata = sqlalchemy.MetaData()
 
-notes = sqlalchemy.Table(
-    "notes",
-    metadata,
-    sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True),
-    sqlalchemy.Column("text", sqlalchemy.String),
-    sqlalchemy.Column("completed", sqlalchemy.Boolean),
-)
+async def get_db_client() -> AsyncIOMotorClient:
+    """Return database client instance."""
+    return db_client
 
-engine = sqlalchemy.create_engine(
-    DATABASE_URL, pool_size=3, max_overflow=0, connect_args={"check_same_thread": False}
-)
-metadata.create_all(engine)
 
-# engine = create_engine(
-#     SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-# )
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+async def connect_db():
+    """Create database connection."""
+    global db_client, database, note_collection
+    db_client = AsyncIOMotorClient(MONGO_DETAILS)
+    database = db_client.untitled_research_tool
+    note_collection = database.get_collection('notes_collection')
 
-Base = declarative_base()
+
+async def close_db():
+    """Close database connection."""
+    db_client.close()

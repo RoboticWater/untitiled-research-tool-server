@@ -1,3 +1,4 @@
+from decouple import config
 from twilio.rest import Client
 from twilio.twiml.messaging_response import MessagingResponse
 import os
@@ -14,11 +15,14 @@ from av.audio.resampler import AudioResampler
 from aiortc import RTCSessionDescription, RTCPeerConnection
 
 from fastapi_socketio import SocketManager
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request, Response, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+
+from routes.note import router as NoteRouter
+from db.database import connect_db, close_db
 
 ROOT = Path(__file__).parent
 
@@ -28,10 +32,9 @@ vosk_interface = os.environ.get('VOSK_SERVER_INTERFACE', 'localhost')
 vosk_cert_file = os.environ.get('VOSK_CERT_FILE', None)
 
 # Set up Vosk parameters
-vosk_model_path = os.environ.get('VOSK_MODEL_PATH', ROOT / 'model')
+vosk_model_path = os.environ.get('VOSK_MODEL_PATH', ROOT / 'vosk-model')
 vosk_sample_rate = float(os.environ.get('VOSK_SAMPLE_RATE', 16000))
 
-print(vosk_model_path)
 # Create Vosk model + threading setup
 model = Model(str(vosk_model_path))
 pool = concurrent.futures.ThreadPoolExecutor((os.cpu_count() or 1))
@@ -48,9 +51,17 @@ app.add_middleware(
 )
 sio = SocketManager(app=app)
 
+app.add_event_handler("startup", connect_db)
+app.add_event_handler("shutdown", close_db)
+
 # Mount static directory to serve files
 app.mount("/static", StaticFiles(directory="client/public"), name="static")
 templates = Jinja2Templates(directory="client/public")
+
+
+# app.include_router(NoteRouter, tags=[
+#                    "Notes"], prefix="/note", dependencies=[Depends(token_listener)])
+app.include_router(NoteRouter, tags=["Notes"], prefix="/api/note")
 
 
 def process_chunk(rec, message):
@@ -105,7 +116,7 @@ class KaldiTask:
                 dataframes = bytearray(b"")
 
 
-async def offer(request):
+async def handle_offer(request):
 
     params = await request.json()
     offer = RTCSessionDescription(
@@ -147,7 +158,7 @@ async def offer(request):
 
 @app.post("/offer")
 async def offer(request: Request):
-    return await offer(request)
+    return await handle_offer(request)
 
 
 # @app.get('/api/messages')
@@ -156,23 +167,25 @@ async def offer(request: Request):
 #     return Response(content=json.dumps([m.body for m in client.messages.list(to='+15108769505')]))
 
 
-twilio_account_sid = os.environ['TWILIO_ACCOUNT_SID']
-twilio_auth_token = os.environ['TWILIO_AUTH_TOKEN']
-client = Client(twilio_account_sid, twilio_auth_token)
+# # os.environ['TWILIO_ACCOUNT_SID']
+# twilio_account_sid = config('TWILIO_ACCOUNT_SID')
+# # os.environ['TWILIO_AUTH_TOKEN']
+# twilio_auth_token = config('TWILIO_AUTH_TOKEN')
+# client = Client(twilio_account_sid, twilio_auth_token)
 
 
-@app.api_route("/sms", methods=['GET', 'POST'])
-def sms_reply(request: Request):
-    """Respond to incoming calls with a simple text message."""
-    # Start our TwiML response
-    resp = MessagingResponse()
-    print(request, request.json())
+# @app.api_route("/sms", methods=['GET', 'POST'])
+# def sms_reply(request: Request):
+#     """Respond to incoming calls with a simple text message."""
+#     # Start our TwiML response
+#     resp = MessagingResponse()
+#     print(request, request.json())
 
-    # Add a message
-    resp.message("Message received")
-    print(str(resp))
+#     # Add a message
+#     resp.message("Message received")
+#     print(str(resp))
 
-    return Response(content=str(resp), media_type='application/xml')
+#     return Response(content=str(resp), media_type='application/xml')
 
 
 @app.get("/{path_name:path}")
@@ -198,6 +211,14 @@ if __name__ == '__main__':
 
     uvicorn.run("server:app", host=vosk_interface,
                 port=vosk_port, reload=True, debug=False)
+
+    # from uvicorn import Config, Server
+    # import uvicorn
+
+    # config = Config(app=app, host=vosk_interface,
+    #                 port=vosk_port, reload=True, debug=True, loop=loop)
+    # server = Server(config)
+    # loop.run_until_complete(server.serve())
 
     # app = web.Application()
     # app.router.add_post('/offer', offer)
