@@ -37,6 +37,7 @@
 
   function handleBlur(event: FocusEvent) {
     focused = false;
+    dispatch("change", { event, note: { text, timestamp } });
     dispatch("blur", { event, note: { text, timestamp } });
   }
 
@@ -54,7 +55,7 @@
 
 <div class="note" bind:this={ref} on:click={handleNoteClick} on:focusout={handleBlur}>
   <div class="content">
-    <input class="note__content" type="text" on:change={handleChange} bind:value={text} />
+    <div class="note__content" type="text" bind:innerHTML={text} contenteditable="true" />
     <div class="note__timestamp">{moment(timestamp).format("HH:mm:ss")}</div>
     <button class="delete" on:click={handleDeleteNote} />
   </div>
@@ -93,6 +94,7 @@
       grid-area: input;
       padding: 3px;
       border: none;
+      word-break: break-word;
     }
     .note__timestamp {
       grid-area: timestamp;

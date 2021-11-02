@@ -37,8 +37,7 @@
   });
 
   function handleDragResizeMove(axis: "x" | "y", index: number, event) {
-    map[axis === "y" ? "rows" : "cols"][index] +=
-      axis === "x" ? event.detail.dx : event.detail.dy;
+    map[axis === "y" ? "rows" : "cols"][index] += axis === "x" ? event.detail.dx : event.detail.dy;
   }
 
   function handleMoveNote(event: any, destX: number, destY: number) {
@@ -103,29 +102,15 @@
     <div class="map">
       <div class="col-handles">
         {#each map.cols.reduce((acc, cur, i) => [...acc, (i > 0 ? acc[acc.length - 1] : 0) + cur], []) as handle, i}
-          <div
-            class="handle col"
-            style={`left: ${handle}px`}
-            use:draggable
-            on:dragmove={(e) => handleDragResizeMove("x", i, e)}
-          >
-            <button class="add-track col" on:click={() => handleAddCol(i)}
-              >+</button
-            >
+          <div class="handle col" style={`left: ${handle}px`} use:draggable on:dragmove={(e) => handleDragResizeMove("x", i, e)}>
+            <button class="add-track col" on:click={() => handleAddCol(i)}>+</button>
           </div>
         {/each}
       </div>
       <div class="row-handles">
         {#each map.rows.reduce((acc, cur, i) => [...acc, (i > 0 ? acc[acc.length - 1] : 0) + cur], []) as handle, i}
-          <div
-            class="handle row"
-            style={`top: ${handle}px`}
-            use:draggable
-            on:dragmove={(e) => handleDragResizeMove("y", i, e)}
-          >
-            <button class="add-track row" on:click={() => handleAddRow(i)}
-              >+</button
-            >
+          <div class="handle row" style={`top: ${handle}px`} use:draggable on:dragmove={(e) => handleDragResizeMove("y", i, e)}>
+            <button class="add-track row" on:click={() => handleAddRow(i)}>+</button>
           </div>
         {/each}
       </div>
@@ -159,6 +144,8 @@
     display: inline-flex;
     flex-direction: column;
     position: relative;
+    border-left: 1px #ddd solid;
+    border-top: 1px #ddd solid;
   }
   .handle {
     position: absolute;

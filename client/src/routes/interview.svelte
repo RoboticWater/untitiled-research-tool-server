@@ -191,8 +191,6 @@
     }).then((res) => {
       return res.json();
     });
-    console.log(res);
-
     const note = res.data;
     notes = [...notes, note];
     noteAdded = runPostUpdate;
